@@ -1,0 +1,8 @@
+[{
+      "relation": ["delegate_permission/common.handle_all_urls"],
+      "target": {
+        "namespace": "android_app",
+        "package_name": "io.github.filosik2.twa",
+        "sha256_cert_fingerprints": ["C5:81:48:BA:2D:93:5B:28:AD:E7:F6:8E:7B:17:F4:3F:35:9A:C3:79:A6:C2:CF:15:67:80:EB:82:A7:74:10:99"]
+      }
+    }]
