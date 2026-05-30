@@ -1,4 +1,4 @@
-const CACHE_NAME = 'klp-radar-v2';
+const CACHE_NAME = 'klp-radar-v3';
 const TILE_CACHE = 'klp-radar-tiles-v1';
 
 const APP_SHELL = [
@@ -10,11 +10,11 @@ const APP_SHELL = [
   './icon-512.png',
   './screenshot-narrow.png',
   './screenshot-wide.png',
-  'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css',
-  'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js',
-  'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
-  'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
-  'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png'
+  './vendor/leaflet.css',
+  './vendor/leaflet.js',
+  './vendor/images/marker-icon.png',
+  './vendor/images/marker-icon-2x.png',
+  './vendor/images/marker-shadow.png'
 ];
 
 self.addEventListener('install', (event) => {
