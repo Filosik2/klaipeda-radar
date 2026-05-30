@@ -67,6 +67,11 @@
     <script>
         // ===== Visited state =====
         const LS_KEY = 'klp_visited_v1';
+        // Поддержка manifest shortcut "сброс"
+        if (new URLSearchParams(location.search).get('reset') === '1') {
+            localStorage.removeItem(LS_KEY);
+            history.replaceState(null, '', location.pathname);
+        }
         function loadVisited() {
             try { return new Set(JSON.parse(localStorage.getItem(LS_KEY) || '[]')); }
             catch { return new Set(); }

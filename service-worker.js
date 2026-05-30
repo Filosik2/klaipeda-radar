@@ -1,4 +1,4 @@
-const CACHE_NAME = 'klp-radar-v1';
+const CACHE_NAME = 'klp-radar-v2';
 const TILE_CACHE = 'klp-radar-tiles-v1';
 
 const APP_SHELL = [
@@ -8,6 +8,8 @@ const APP_SHELL = [
   './manifest.json',
   './icon-192.png',
   './icon-512.png',
+  './screenshot-narrow.png',
+  './screenshot-wide.png',
   'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css',
   'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js',
   'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
@@ -17,7 +19,11 @@ const APP_SHELL = [
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => cache.addAll(APP_SHELL)).then(() => self.skipWaiting())
+    caches.open(CACHE_NAME)
+      .then((cache) => Promise.all(APP_SHELL.map((u) =>
+        cache.add(u).catch((e) => console.warn('SW skip', u, e))
+      )))
+      .then(() => self.skipWaiting())
   );
 });
 
@@ -33,7 +39,19 @@ self.addEventListener('activate', (event) => {
 
 self.addEventListener('fetch', (event) => {
   const req = event.request;
+  if (req.method !== 'GET') return;
   const url = new URL(req.url);
+
+  // Навигационные запросы (например, прямая загрузка / или /index.html) -> отдаём index.html из кэша,
+  // это покрывает офлайн-чек PWABuilder.
+  if (req.mode === 'navigate') {
+    event.respondWith(
+      fetch(req).catch(() =>
+        caches.match('./index.html').then((r) => r || caches.match('./'))
+      )
+    );
+    return;
+  }
 
   // Тайлы Carto — cache-first, копим в офлайне
   if (url.hostname.endsWith('basemaps.cartocdn.com')) {
@@ -57,7 +75,7 @@ self.addEventListener('fetch', (event) => {
   event.respondWith(
     caches.match(req).then((cached) => {
       const network = fetch(req).then((resp) => {
-        if (resp.ok && req.method === 'GET') {
+        if (resp.ok) {
           const copy = resp.clone();
           caches.open(CACHE_NAME).then((c) => c.put(req, copy));
         }

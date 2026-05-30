@@ -1,26 +1,71 @@
 {
+  "id": "/klaipeda-radar/",
   "name": "Klaipėda Survival Radar",
   "short_name": "KlpRadar",
-  "description": "Карта продуктовых, алко и заправок Клайпеды с трекером посещений",
+  "description": "Карта продуктовых, алко и заправок Клайпеды с трекером посещений. Работает офлайн.",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
-  "orientation": "portrait",
+  "display_override": ["standalone", "minimal-ui", "browser"],
+  "orientation": "any",
   "background_color": "#121212",
   "theme_color": "#d32f2f",
   "lang": "ru",
+  "dir": "ltr",
+  "categories": ["maps", "navigation", "lifestyle", "travel", "utilities"],
+  "prefer_related_applications": false,
+  "launch_handler": {
+    "client_mode": "focus-existing"
+  },
   "icons": [
     {
       "src": "./icon-192.png",
       "sizes": "192x192",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
+    },
+    {
+      "src": "./icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
     },
     {
       "src": "./icon-512.png",
       "sizes": "512x512",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
+    },
+    {
+      "src": "./icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "./screenshot-narrow.png",
+      "sizes": "1080x1920",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Карта Клайпеды на телефоне"
+    },
+    {
+      "src": "./screenshot-wide.png",
+      "sizes": "1920x1080",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "Карта Клайпеды на десктопе"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Сбросить посещённые",
+      "short_name": "Сброс",
+      "description": "Очистить отметки 'я тут был'",
+      "url": "./index.html?reset=1",
+      "icons": [{ "src": "./icon-192.png", "sizes": "192x192" }]
     }
   ]
 }
