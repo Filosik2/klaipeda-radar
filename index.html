@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="theme-color" content="#d32f2f">
+    <link rel="manifest" href="./manifest.json">
+    <link rel="icon" type="image/png" href="./icon-192.png">
+    <link rel="apple-touch-icon" href="./icon-192.png">
+    <title>Klaipėda Survival Radar</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+        body, html { margin: 0; padding: 0; height: 100%; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #121212; }
+        #map { width: 100vw; height: 100vh; }
+
+        .popup-content { font-size: 14px; min-width: 220px; }
+        .popup-content h3 { margin: 0 0 8px 0; color: #d32f2f; border-bottom: 1px solid #ccc; padding-bottom: 4px; }
+        .popup-content p { margin: 4px 0; color: #333; }
+
+        .visited-toggle {
+            display: flex; align-items: center; gap: 8px; padding: 8px;
+            margin-top: 10px; background: #f5f5f5; border-radius: 4px;
+            cursor: pointer; user-select: none; font-weight: bold; color: #333;
+        }
+        .visited-toggle input { width: 18px; height: 18px; cursor: pointer; }
+
+        .maps-btn {
+            display: block; width: 100%; padding: 8px; margin-top: 8px;
+            background-color: #1a73e8; color: white; text-align: center;
+            border: none; border-radius: 4px; cursor: pointer; font-weight: bold;
+            text-decoration: none; box-sizing: border-box;
+        }
+        .maps-btn:hover { background-color: #1557b0; }
+
+        .custom-icon {
+            font-size: 24px; text-align: center; line-height: 24px;
+            background: none !important; border: none !important;
+            filter: drop-shadow(2px 4px 4px rgba(0,0,0,0.6));
+        }
+        .custom-icon.visited {
+            opacity: 0.35;
+            filter: grayscale(1) drop-shadow(1px 2px 2px rgba(0,0,0,0.4));
+        }
+
+        #stats {
+            position: absolute; top: 10px; right: 10px; z-index: 1000;
+            background: rgba(0,0,0,0.75); color: #fff; padding: 8px 12px;
+            border-radius: 6px; font-size: 13px; font-weight: bold;
+            backdrop-filter: blur(4px);
+        }
+    </style>
+</head>
+<body>
+
+    <div id="map"></div>
+    <div id="stats">— / —</div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="./data.js"></script>
+    <script>
+        // ===== Visited state =====
+        const LS_KEY = 'klp_visited_v1';
+        function loadVisited() {
+            try { return new Set(JSON.parse(localStorage.getItem(LS_KEY) || '[]')); }
+            catch { return new Set(); }
+        }
+        function saveVisited(set) {
+            localStorage.setItem(LS_KEY, JSON.stringify([...set]));
+        }
+        const visited = loadVisited();
+        const storeId = (s) => `${s.lat.toFixed(6)},${s.lon.toFixed(6)}`;
+
+        // ===== Map =====
+        const KLAIPEDA_BOUNDS = L.latLngBounds([55.628, 21.080], [55.760, 21.215]);
+
+        const map = L.map('map', {
+            maxBounds: KLAIPEDA_BOUNDS,
+            maxBoundsViscosity: 1.0,
+            minZoom: 12
+        }).fitBounds(KLAIPEDA_BOUNDS);
+
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+            maxZoom: 19,
+            attribution: '© OpenStreetMap',
+            bounds: KLAIPEDA_BOUNDS
+        }).addTo(map);
+
+        // ===== Icons =====
+        function emojiFor(type) {
+            switch (type) {
+                case 'alcohol': return '🍾';
+                case 'fuel': return '⛽';
+                case 'convenience': return '🏪';
+                case 'doityourself': return '🛠️';
+                default: return '🛒';
+            }
+        }
+        function makeIcon(type, isVisited) {
+            return L.divIcon({
+                className: 'custom-icon' + (isVisited ? ' visited' : ''),
+                html: emojiFor(type),
+                iconSize: [30, 30],
+                iconAnchor: [15, 15],
+                popupAnchor: [0, -15]
+            });
+        }
+
+        // ===== Stats =====
+        const stats = document.getElementById('stats');
+        function updateStats() {
+            stats.textContent = `${visited.size} / ${window.STORES.length}`;
+        }
+
+        // ===== Markers =====
+        const markersById = new Map();
+
+        window.STORES.forEach((store) => {
+            if (typeof store.lat !== 'number' || typeof store.lon !== 'number') return;
+            const id = storeId(store);
+            const marker = L.marker([store.lat, store.lon], { icon: makeIcon(store.type, visited.has(id)) }).addTo(map);
+
+            const gmapsUrl = `https://www.google.com/maps/search/?api=1&query=${store.lat},${store.lon}`;
+
+            const wrap = document.createElement('div');
+            wrap.className = 'popup-content';
+            wrap.innerHTML = `
+                <h3></h3>
+                <p>📍 <b>Адрес:</b> <span class="addr"></span></p>
+                <p>🏷️ <b>Тип:</b> <span class="ttype"></span></p>
+                <label class="visited-toggle">
+                    <input type="checkbox" />
+                    <span>✅ Я тут был</span>
+                </label>
+                <a class="maps-btn" target="_blank" rel="noopener">Открыть в Google Maps</a>
+            `;
+            wrap.querySelector('h3').textContent = store.name;
+            wrap.querySelector('.addr').textContent = store.address;
+            wrap.querySelector('.ttype').textContent = (store.type || '').toUpperCase();
+            wrap.querySelector('.maps-btn').href = gmapsUrl;
+
+            const cb = wrap.querySelector('input');
+            cb.checked = visited.has(id);
+            cb.addEventListener('change', () => {
+                if (cb.checked) visited.add(id); else visited.delete(id);
+                saveVisited(visited);
+                marker.setIcon(makeIcon(store.type, cb.checked));
+                updateStats();
+            });
+
+            marker.bindPopup(wrap, { maxWidth: 280 });
+            markersById.set(id, marker);
+        });
+
+        updateStats();
+
+        // ===== Service worker =====
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./service-worker.js').catch((e) => console.warn('SW reg failed', e));
+            });
+        }
+    </script>
+</body>
+</html>

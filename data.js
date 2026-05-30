@@ -1,0 +1,765 @@
+window.STORES = [
+  {
+    "name": "IKI Universitetas",
+    "address": "H. Manto g. 90",
+    "type": "supermarket",
+    "lat": 55.7287918,
+    "lon": 21.1253395
+  },
+  {
+    "name": "Maxima XXX",
+    "address": "Taikos pr. 141",
+    "type": "supermarket",
+    "lat": 55.6626973,
+    "lon": 21.1783576
+  },
+  {
+    "name": "RIMI Hypermarket",
+    "address": "Liepojos g. 27",
+    "type": "supermarket",
+    "lat": 55.7514746,
+    "lon": 21.1299592
+  },
+  {
+    "name": "RIMI Hypermarket",
+    "address": "Taikos pr. 64",
+    "type": "supermarket",
+    "lat": 55.6869596,
+    "lon": 21.1567413
+  },
+  {
+    "name": "RIMI Molas",
+    "address": "Taikos pr. 139",
+    "type": "supermarket",
+    "lat": 55.6659272,
+    "lon": 21.1762845
+  },
+  {
+    "name": "Norfa XXL",
+    "address": "Taikos pr. 66A",
+    "type": "supermarket",
+    "lat": 55.6845166,
+    "lon": 21.1593454
+  },
+  {
+    "name": "IKI Eglė",
+    "address": "Taikos pr. 109",
+    "type": "supermarket",
+    "lat": 55.6755973,
+    "lon": 21.1690419
+  },
+  {
+    "name": "Безымянный ларёк",
+    "address": "Klaipėdos g. 16",
+    "type": "convenience",
+    "lat": 55.7524554,
+    "lon": 21.1477454
+  },
+  {
+    "name": "Parduotuvė - kavinė",
+    "address": "Stoties g. 4",
+    "type": "convenience",
+    "lat": 55.7707388,
+    "lon": 21.0945811
+  },
+  {
+    "name": "Maxima X",
+    "address": "Mokyklos g. 15",
+    "type": "convenience",
+    "lat": 55.7097035,
+    "lon": 21.1541667
+  },
+  {
+    "name": "Maxima",
+    "address": "Taikos pr. 12A",
+    "type": "supermarket",
+    "lat": 55.7040398,
+    "lon": 21.1425623
+  },
+  {
+    "name": "IKI EXPRESS Herkaus Manto",
+    "address": "H. Manto g. 31",
+    "type": "convenience",
+    "lat": 55.7177562,
+    "lon": 21.1274483
+  },
+  {
+    "name": "IKI EXPRESS Pajūrio",
+    "address": "Turgaus g. 16",
+    "type": "convenience",
+    "lat": 55.7086572,
+    "lon": 21.1347822
+  },
+  {
+    "name": "IKI EXPRESS Janonis",
+    "address": "J. Janonio g. 21",
+    "type": "convenience",
+    "lat": 55.7185081,
+    "lon": 21.1194554
+  },
+  {
+    "name": "IKI CENTO Klaipėda",
+    "address": "Kretingos g. 52",
+    "type": "convenience",
+    "lat": 55.7384445,
+    "lon": 21.1343405
+  },
+  {
+    "name": "Maxima",
+    "address": "Naikupės g. 18",
+    "type": "convenience",
+    "lat": 55.6783526,
+    "lon": 21.1549874
+  },
+  {
+    "name": "IKI",
+    "address": "Nidos g. 5",
+    "type": "supermarket",
+    "lat": 55.6787306,
+    "lon": 21.1564308
+  },
+  {
+    "name": "Безымянный ларёк",
+    "address": "Sulupės g. 12",
+    "type": "convenience",
+    "lat": 55.6803323,
+    "lon": 21.149894
+  },
+  {
+    "name": "Maxima",
+    "address": "Šilutės pl. 16A",
+    "type": "convenience",
+    "lat": 55.7001697,
+    "lon": 21.1611857
+  },
+  {
+    "name": "Grūstė",
+    "address": "Debreceno g. 61",
+    "type": "supermarket",
+    "lat": 55.6793668,
+    "lon": 21.1674522
+  },
+  {
+    "name": "Maxima X",
+    "address": "H. Manto g. 11",
+    "type": "supermarket",
+    "lat": 55.7145838,
+    "lon": 21.1290311
+  },
+  {
+    "name": "Alynas",
+    "address": "Liepojos g. 27",
+    "type": "alcohol",
+    "lat": 55.7518569,
+    "lon": 21.1300637
+  },
+  {
+    "name": "Maxima Bazė XXX",
+    "address": "Šilutės pl. 35",
+    "type": "supermarket",
+    "lat": 55.6921122,
+    "lon": 21.1823885
+  },
+  {
+    "name": "Maisto prekių ir alkoholio parduotuvė",
+    "address": "Debreceno g. 3",
+    "type": "convenience",
+    "lat": 55.684172,
+    "lon": 21.1792327
+  },
+  {
+    "name": "Grūstė",
+    "address": "Minijos g. 127",
+    "type": "convenience",
+    "lat": 55.68234,
+    "lon": 21.1512176
+  },
+  {
+    "name": "Aibė",
+    "address": "Taikos pr. 100",
+    "type": "convenience",
+    "lat": 55.6682202,
+    "lon": 21.1718525
+  },
+  {
+    "name": "Aibė",
+    "address": "Vilhelmo Berbomo g. 2",
+    "type": "supermarket",
+    "lat": 55.7240818,
+    "lon": 21.129937
+  },
+  {
+    "name": "Narvija",
+    "address": "Dubysos g. 29A",
+    "type": "supermarket",
+    "lat": 55.6927561,
+    "lon": 21.1627793
+  },
+  {
+    "name": "Grūstė",
+    "address": "Laukininkų g. 15B",
+    "type": "supermarket",
+    "lat": 55.6648171,
+    "lon": 21.1928361
+  },
+  {
+    "name": "Laukininkų prekyba",
+    "address": "Laukininkų g. 15A",
+    "type": "convenience",
+    "lat": 55.6648657,
+    "lon": 21.1921919
+  },
+  {
+    "name": "Aibė",
+    "address": "Kalnupės g. 2G",
+    "type": "supermarket",
+    "lat": 55.6759504,
+    "lon": 21.1540229
+  },
+  {
+    "name": "Aibė",
+    "address": "Jotvingių g. 22",
+    "type": "convenience",
+    "lat": 55.7085928,
+    "lon": 21.1612568
+  },
+  {
+    "name": "Grūstė",
+    "address": "Taikos pr. 39",
+    "type": "convenience",
+    "lat": 55.6982609,
+    "lon": 21.149436
+  },
+  {
+    "name": "Maxima XXX",
+    "address": "Taikos pr. 61",
+    "type": "supermarket",
+    "lat": 55.6930219,
+    "lon": 21.1563532
+  },
+  {
+    "name": "Čia",
+    "address": "Tilžės g. 19",
+    "type": "convenience",
+    "lat": 55.7064601,
+    "lon": 21.1469308
+  },
+  {
+    "name": "Безымянный ларёк",
+    "address": "Nendrių g. 37",
+    "type": "convenience",
+    "lat": 55.6620144,
+    "lon": 21.1646073
+  },
+  {
+    "name": "Vajulitas",
+    "address": "Minijos g. 39",
+    "type": "convenience",
+    "lat": 55.6963478,
+    "lon": 21.1389021
+  },
+  {
+    "name": "Mere",
+    "address": "Tilžės g. 51",
+    "type": "supermarket",
+    "lat": 55.7072155,
+    "lon": 21.164618
+  },
+  {
+    "name": "Aibė",
+    "address": "Šaltkalvių g. 2",
+    "type": "convenience",
+    "lat": 55.706526,
+    "lon": 21.1376143
+  },
+  {
+    "name": "Aibė",
+    "address": "Nidos g. 48",
+    "type": "convenience",
+    "lat": 55.6799431,
+    "lon": 21.1531663
+  },
+  {
+    "name": "Express Market",
+    "address": "Taikos pr. 97B",
+    "type": "convenience",
+    "lat": 55.6790347,
+    "lon": 21.1665509
+  },
+  {
+    "name": "Maxima XX",
+    "address": "Liepų g. 81",
+    "type": "supermarket",
+    "lat": 55.7221936,
+    "lon": 21.1537095
+  },
+  {
+    "name": "Vynoteka",
+    "address": "Liepų g. 81",
+    "type": "alcohol",
+    "lat": 55.7228845,
+    "lon": 21.1554329
+  },
+  {
+    "name": "Iki",
+    "address": "Taikos pr. 28",
+    "type": "supermarket",
+    "lat": 55.6982017,
+    "lon": 21.1469879
+  },
+  {
+    "name": "Безымянный ларёк",
+    "address": "Rimkų g. 29",
+    "type": "convenience",
+    "lat": 55.6643515,
+    "lon": 21.2192987
+  },
+  {
+    "name": "Rimi Hyper",
+    "address": "Šiaurės pr. 15",
+    "type": "supermarket",
+    "lat": 55.7276283,
+    "lon": 21.1413786
+  },
+  {
+    "name": "Viada",
+    "address": "Liepojos g. 242",
+    "type": "convenience",
+    "lat": 55.7538812,
+    "lon": 21.1313388
+  },
+  {
+    "name": "IKI Vyturys",
+    "address": "Laukininkų g. 19",
+    "type": "supermarket",
+    "lat": 55.6639741,
+    "lon": 21.192054
+  },
+  {
+    "name": "Maxima",
+    "address": "Šilutės pl. 68",
+    "type": "supermarket",
+    "lat": 55.6765494,
+    "lon": 21.1887373
+  },
+  {
+    "name": "IKI Vingis",
+    "address": "Vingio g. 14",
+    "type": "supermarket",
+    "lat": 55.6719089,
+    "lon": 21.1914578
+  },
+  {
+    "name": "Maxima XX",
+    "address": "Šilutės pl. 40A",
+    "type": "supermarket",
+    "lat": 55.6882933,
+    "lon": 21.1786264
+  },
+  {
+    "name": "IKI Draugystė",
+    "address": "Debreceno g. 54",
+    "type": "supermarket",
+    "lat": 55.6827189,
+    "lon": 21.1719158
+  },
+  {
+    "name": "Norfa",
+    "address": "Baltijos pr. 101",
+    "type": "supermarket",
+    "lat": 55.6864728,
+    "lon": 21.1614622
+  },
+  {
+    "name": "Grūstė",
+    "address": "Kretingos g. 9",
+    "type": "supermarket",
+    "lat": 55.7242063,
+    "lon": 21.1306335
+  },
+  {
+    "name": "Viada",
+    "address": "Taikos pr. 70A",
+    "type": "convenience",
+    "lat": 55.6832071,
+    "lon": 21.1604564
+  },
+  {
+    "name": "Norfa",
+    "address": "Taikos pr. 5",
+    "type": "supermarket",
+    "lat": 55.7053975,
+    "lon": 21.1426502
+  },
+  {
+    "name": "Maxima X",
+    "address": "Sportininkų g. 18",
+    "type": "supermarket",
+    "lat": 55.7220412,
+    "lon": 21.1165438
+  },
+  {
+    "name": "IKI Butkų Juzė",
+    "address": "Priestočio g. 24",
+    "type": "supermarket",
+    "lat": 55.7197237,
+    "lon": 21.13831
+  },
+  {
+    "name": "Iki",
+    "address": "Šaulių g. 11",
+    "type": "convenience",
+    "lat": 55.7147702,
+    "lon": 21.1313545
+  },
+  {
+    "name": "IKI Kaimelis",
+    "address": "Kretingos g. 83",
+    "type": "supermarket",
+    "lat": 55.7339223,
+    "lon": 21.1316626
+  },
+  {
+    "name": "Norfa XXL",
+    "address": "Priestočio g. 30",
+    "type": "supermarket",
+    "lat": 55.7182774,
+    "lon": 21.1459688
+  },
+  {
+    "name": "Lidl",
+    "address": "Tilžės g. 56B",
+    "type": "supermarket",
+    "lat": 55.7041696,
+    "lon": 21.1591265
+  },
+  {
+    "name": "Maxima X",
+    "address": "Audros g. 6B",
+    "type": "supermarket",
+    "lat": 55.7371471,
+    "lon": 21.0934401
+  },
+  {
+    "name": "IKI Tauralaukis",
+    "address": "Liepojos g. 238",
+    "type": "supermarket",
+    "lat": 55.7530532,
+    "lon": 21.1316569
+  },
+  {
+    "name": "IKI Žardė",
+    "address": "Taikos pr. 115",
+    "type": "supermarket",
+    "lat": 55.6718967,
+    "lon": 21.1715025
+  },
+  {
+    "name": "Lidl",
+    "address": "Taikos pr. 66B",
+    "type": "supermarket",
+    "lat": 55.6836617,
+    "lon": 21.1602698
+  },
+  {
+    "name": "Norfa",
+    "address": "Tauralaukio g. 1",
+    "type": "supermarket",
+    "lat": 55.753593,
+    "lon": 21.1425712
+  },
+  {
+    "name": "Norfa XL",
+    "address": "Vingio g. 21A",
+    "type": "supermarket",
+    "lat": 55.6682984,
+    "lon": 21.1958719
+  },
+  {
+    "name": "Lidl",
+    "address": "Smiltelės g. 19",
+    "type": "supermarket",
+    "lat": 55.6695296,
+    "lon": 21.1924062
+  },
+  {
+    "name": "Lidl",
+    "address": "Liepojos g. 3",
+    "type": "supermarket",
+    "lat": 55.7446291,
+    "lon": 21.1292517
+  },
+  {
+    "name": "Rimi",
+    "address": "Vingio g. 31",
+    "type": "supermarket",
+    "lat": 55.6667624,
+    "lon": 21.1968445
+  },
+  {
+    "name": "Rimi",
+    "address": "Pajūrio g. 5A",
+    "type": "supermarket",
+    "lat": 55.7538358,
+    "lon": 21.1513018
+  },
+  {
+    "name": "Norfa XL",
+    "address": "Gedminų g. 7B",
+    "type": "supermarket",
+    "lat": 55.6759657,
+    "lon": 21.1786258
+  },
+  {
+    "name": "Lidl",
+    "address": "Statybininkų pr. 18",
+    "type": "supermarket",
+    "lat": 55.6748339,
+    "lon": 21.1738458
+  },
+  {
+    "name": "Iki",
+    "address": "Minijos g. 100",
+    "type": "supermarket",
+    "lat": 55.6831969,
+    "lon": 21.149047
+  },
+  {
+    "name": "Senukai",
+    "address": "Šilutės pl. 35",
+    "type": "doityourself",
+    "lat": 55.6924297,
+    "lon": 21.1835741
+  },
+  {
+    "name": "Senukai",
+    "address": "Liepų g. 81",
+    "type": "doityourself",
+    "lat": 55.7232985,
+    "lon": 21.1557639
+  },
+  {
+    "name": "Depo",
+    "address": "Šilutės pl. 28",
+    "type": "doityourself",
+    "lat": 55.6940011,
+    "lon": 21.1722503
+  },
+  {
+    "name": "Vynoteka",
+    "address": "Priestočio g.",
+    "type": "alcohol",
+    "lat": 55.7185533,
+    "lon": 21.1455343
+  },
+  {
+    "name": "Vynoteka",
+    "address": "Šilutės pl. 35",
+    "type": "alcohol",
+    "lat": 55.6923557,
+    "lon": 21.1820401
+  },
+  {
+    "name": "Vynoteka",
+    "address": "Taikos pr. 141",
+    "type": "alcohol",
+    "lat": 55.6623858,
+    "lon": 21.178098
+  },
+  {
+    "name": "Pitliaus skanėstai",
+    "address": "Didžioji Vandens g.",
+    "type": "convenience",
+    "lat": 55.7083972,
+    "lon": 21.1366827
+  },
+  {
+    "name": "Agluona",
+    "address": "Birutės g. 22A",
+    "type": "convenience",
+    "lat": 55.6919318,
+    "lon": 21.1467311
+  },
+  {
+    "name": "Youmame",
+    "address": "Taikos pr. 8",
+    "type": "convenience",
+    "lat": 55.7045707,
+    "lon": 21.1418936
+  },
+  {
+    "name": "Circle K",
+    "address": "Tilžės g. 56A",
+    "type": "fuel",
+    "lat": 55.7041492,
+    "lon": 21.1608983
+  },
+  {
+    "name": "Viada",
+    "address": "Priestočio g. 28",
+    "type": "fuel",
+    "lat": 55.7192159,
+    "lon": 21.1411365
+  },
+  {
+    "name": "Viada",
+    "address": "Šilutės pl. 52",
+    "type": "fuel",
+    "lat": 55.6817379,
+    "lon": 21.1851775
+  },
+  {
+    "name": "Circle K",
+    "address": "Vilniaus pl. 1A",
+    "type": "fuel",
+    "lat": 55.6927888,
+    "lon": 21.179784
+  },
+  {
+    "name": "Baltic Petroleum",
+    "address": "Šilutės pl. 1",
+    "type": "fuel",
+    "lat": 55.7049578,
+    "lon": 21.1635571
+  },
+  {
+    "name": "Circle K",
+    "address": "Jūrininkų pr. 31",
+    "type": "fuel",
+    "lat": 55.6566546,
+    "lon": 21.1824418
+  },
+  {
+    "name": "Orlen - Lietuva",
+    "address": "Šilutės pl. 26A",
+    "type": "fuel",
+    "lat": 55.6985727,
+    "lon": 21.1673283
+  },
+  {
+    "name": "Baltic Petroleum",
+    "address": "Liepų g. 79A",
+    "type": "fuel",
+    "lat": 55.7208155,
+    "lon": 21.1524956
+  },
+  {
+    "name": "Baltic Petroleum",
+    "address": "Tilžės g.",
+    "type": "fuel",
+    "lat": 55.7007719,
+    "lon": 21.2004995
+  },
+  {
+    "name": "Circle K",
+    "address": "Taikos pr. 61B",
+    "type": "fuel",
+    "lat": 55.692421,
+    "lon": 21.153759
+  },
+  {
+    "name": "Orlen",
+    "address": "Šilutės pl. 94",
+    "type": "fuel",
+    "lat": 55.6681613,
+    "lon": 21.2086485
+  },
+  {
+    "name": "Circle K",
+    "address": "Taikos pr. 112A",
+    "type": "fuel",
+    "lat": 55.666436,
+    "lon": 21.172644
+  },
+  {
+    "name": "Viada",
+    "address": "Nemuno g. 139",
+    "type": "fuel",
+    "lat": 55.6751972,
+    "lon": 21.1530337
+  },
+  {
+    "name": "Trevena",
+    "address": "Minijos g. 152A",
+    "type": "fuel",
+    "lat": 55.6696651,
+    "lon": 21.1586138
+  },
+  {
+    "name": "Orlen",
+    "address": "Minijos g. 44",
+    "type": "fuel",
+    "lat": 55.6938667,
+    "lon": 21.1402705
+  },
+  {
+    "name": "Circle K",
+    "address": "Minijos g. 90",
+    "type": "fuel",
+    "lat": 55.687592,
+    "lon": 21.1448579
+  },
+  {
+    "name": "Trevena",
+    "address": "Kretingos g. 28A",
+    "type": "fuel",
+    "lat": 55.7284458,
+    "lon": 21.1325877
+  },
+  {
+    "name": "Emsi",
+    "address": "Taikos pr. 124",
+    "type": "fuel",
+    "lat": 55.6611111,
+    "lon": 21.1762174
+  },
+  {
+    "name": "Circle K",
+    "address": "H. Manto g. 96",
+    "type": "fuel",
+    "lat": 55.7303183,
+    "lon": 21.1247329
+  },
+  {
+    "name": "Emsi",
+    "address": "Minijos g.",
+    "type": "fuel",
+    "lat": 55.6687698,
+    "lon": 21.1593011
+  },
+  {
+    "name": "Circle K",
+    "address": "Sausio 15-osios g. 2",
+    "type": "fuel",
+    "lat": 55.7020689,
+    "lon": 21.1380344
+  },
+  {
+    "name": "Безымянный ларёк",
+    "address": "Vingio g.",
+    "type": "convenience",
+    "lat": 55.6638986,
+    "lon": 21.1929533
+  },
+  {
+    "name": "Moki-Veži",
+    "address": "Šilutės pl. 83A",
+    "type": "doityourself",
+    "lat": 55.6795138,
+    "lon": 21.1893477
+  },
+  {
+    "name": "Stateta",
+    "address": "Minijos g.",
+    "type": "fuel",
+    "lat": 55.6851005,
+    "lon": 21.147092
+  },
+  {
+    "name": "Jozita",
+    "address": "Taikos pr. 157",
+    "type": "fuel",
+    "lat": 55.6608743,
+    "lon": 21.1781231
+  }
+];
