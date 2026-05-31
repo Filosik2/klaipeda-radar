@@ -226,9 +226,10 @@
                 return 2 * R * Math.asin(Math.sqrt(a));
             }
 
-            function findTriple(maxR) {
+            // Все валидные тройки (дедуп по отсортированным ID), отсортированы по score
+            function findTriples(maxR) {
                 const unvis = window.STORES.filter(s => s.type && !visited.has(storeId(s)));
-                let best = null, bestScore = Infinity;
+                const seen = new Map();
                 for (let i = 0; i < unvis.length; i++) {
                     const A = unvis[i];
                     const near = [];
@@ -247,11 +248,34 @@
                             const dBC = haversine(B.s.lat, B.s.lon, C.s.lat, C.s.lon);
                             if (dBC > maxR) continue;
                             const score = Math.max(B.d, C.d, dBC);
-                            if (score < bestScore) { bestScore = score; best = [A, B.s, C.s]; }
+                            const ids = [storeId(A), storeId(B.s), storeId(C.s)].sort();
+                            const key = ids.join('|');
+                            const prev = seen.get(key);
+                            if (!prev || prev.score > score) {
+                                seen.set(key, { triple: [A, B.s, C.s], maxDist: score, key });
+                            }
                         }
                     }
                 }
-                return best ? { triple: best, maxDist: bestScore } : null;
+                return [...seen.values()].sort((x, y) => x.maxDist - y.maxDist);
+            }
+
+            const LAST_QUEST_KEY = 'klp_last_quest_v1';
+            function pickRandomTriple() {
+                let pool = [];
+                for (const r of RADII_M) {
+                    pool = findTriples(r);
+                    if (pool.length) break;
+                }
+                if (!pool.length) return null;
+                // Берём топ-K лучших по плотности (но не меньше 5 чтобы был выбор)
+                const topK = pool.slice(0, Math.max(5, Math.min(20, pool.length)));
+                const lastKey = localStorage.getItem(LAST_QUEST_KEY);
+                let candidates = topK.filter(t => t.key !== lastKey);
+                if (!candidates.length) candidates = topK;
+                const pick = candidates[Math.floor(Math.random() * candidates.length)];
+                localStorage.setItem(LAST_QUEST_KEY, pick.key);
+                return pick;
             }
 
             const st = { active: false, targets: [], targetIds: new Set(), markers: [], line: null };
@@ -292,8 +316,7 @@
 
             function start() {
                 if (st.active) { toast('Квест уже идёт'); return; }
-                let found = null;
-                for (const r of RADII_M) { found = findTriple(r); if (found) break; }
+                const found = pickRandomTriple();
                 if (!found) { toast('Не нашёл 3 непосещённых точки разных типов поблизости'); return; }
 
                 st.active = true;
