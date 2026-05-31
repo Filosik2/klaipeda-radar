@@ -479,9 +479,31 @@
                     return m;
                 });
 
-                const pts = found.triple.map(s => [s.lat, s.lon]); pts.push(pts[0]);
-                st.line = L.polyline(pts, ROUTE_STYLE).addTo(map);
+                const pts = found.triple.map(s => [s.lat, s.lon]);
                 map.fitBounds(L.latLngBounds(pts).pad(0.35));
+
+                // OSRM пешеходный роутинг с фоллбэком на прямую полилинию при оффлайне
+                (async () => {
+                    const url = 'https://router.project-osrm.org/route/v1/foot/'
+                        + found.triple.map(s => `${s.lon},${s.lat}`).join(';')
+                        + '?overview=full&geometries=geojson';
+                    try {
+                        const resp = await fetch(url);
+                        if (!resp.ok) throw new Error('OSRM HTTP ' + resp.status);
+                        const data = await resp.json();
+                        const geom = data.routes && data.routes[0] && data.routes[0].geometry;
+                        if (!geom) throw new Error('OSRM: no geometry');
+                        if (!st.active) return; // юзер успел свернуть квест пока запрос летел
+                        const shadow = L.geoJSON(geom, { style: { color: '#000', weight: 9, opacity: 0.35, lineCap: 'round', lineJoin: 'round' } });
+                        const main   = L.geoJSON(geom, { style: { color: '#2196f3', weight: 5, opacity: 0.95, lineCap: 'round', lineJoin: 'round' } });
+                        st.line = L.layerGroup([shadow, main]).addTo(map);
+                    } catch (e) {
+                        console.warn('OSRM unreachable, fallback to straight polyline:', e);
+                        if (!st.active) return;
+                        const closed = [...pts, pts[0]];
+                        st.line = L.polyline(closed, ROUTE_STYLE).addTo(map);
+                    }
+                })();
 
                 showBanner(found.maxDist);
                 document.addEventListener('visited-changed', onVisited);
