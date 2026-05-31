@@ -226,56 +226,75 @@
                 return 2 * R * Math.asin(Math.sqrt(a));
             }
 
-            // Все валидные тройки (дедуп по отсортированным ID), отсортированы по score
-            function findTriples(maxR) {
-                const unvis = window.STORES.filter(s => s.type && !visited.has(storeId(s)));
-                const seen = new Map();
-                for (let i = 0; i < unvis.length; i++) {
-                    const A = unvis[i];
-                    const near = [];
-                    for (let j = 0; j < unvis.length; j++) {
-                        if (j === i) continue;
-                        const d = haversine(A.lat, A.lon, unvis[j].lat, unvis[j].lon);
-                        if (d <= maxR) near.push({ s: unvis[j], d });
-                    }
-                    near.sort((x, y) => x.d - y.d);
-                    for (let p = 0; p < near.length; p++) {
-                        const B = near[p];
-                        if (B.s.type === A.type) continue;
-                        for (let q = p + 1; q < near.length; q++) {
-                            const C = near[q];
-                            if (C.s.type === A.type || C.s.type === B.s.type) continue;
-                            const dBC = haversine(B.s.lat, B.s.lon, C.s.lat, C.s.lon);
-                            if (dBC > maxR) continue;
-                            const score = Math.max(B.d, C.d, dBC);
-                            const ids = [storeId(A), storeId(B.s), storeId(C.s)].sort();
-                            const key = ids.join('|');
-                            const prev = seen.get(key);
-                            if (!prev || prev.score > score) {
-                                seen.set(key, { triple: [A, B.s, C.s], maxDist: score, key });
-                            }
-                        }
+            // Для конкретного якоря-А ищем самую плотную тройку с разными типами
+            function bestTripleFor(A, unvis, maxR) {
+                const near = [];
+                for (const s of unvis) {
+                    if (s === A) continue;
+                    const d = haversine(A.lat, A.lon, s.lat, s.lon);
+                    if (d <= maxR) near.push({ s, d });
+                }
+                near.sort((x, y) => x.d - y.d);
+                let best = null, bestScore = Infinity;
+                for (let p = 0; p < near.length; p++) {
+                    const B = near[p];
+                    if (B.s.type === A.type) continue;
+                    for (let q = p + 1; q < near.length; q++) {
+                        const C = near[q];
+                        if (C.s.type === A.type || C.s.type === B.s.type) continue;
+                        const dBC = haversine(B.s.lat, B.s.lon, C.s.lat, C.s.lon);
+                        if (dBC > maxR) continue;
+                        const score = Math.max(B.d, C.d, dBC);
+                        if (score < bestScore) { bestScore = score; best = [A, B.s, C.s]; }
                     }
                 }
-                return [...seen.values()].sort((x, y) => x.maxDist - y.maxDist);
+                if (!best) return null;
+                const ids = best.map(storeId).sort();
+                return { triple: best, maxDist: bestScore, key: ids.join('|') };
             }
 
-            const LAST_QUEST_KEY = 'klp_last_quest_v1';
+            const RECENT_KEY = 'klp_recent_quests_v1';
+            const RECENT_LIMIT = 8;
+            function loadRecent() {
+                try { return JSON.parse(localStorage.getItem(RECENT_KEY) || '[]'); }
+                catch { return []; }
+            }
+            function pushRecent(key) {
+                const arr = loadRecent().filter(k => k !== key);
+                arr.unshift(key);
+                while (arr.length > RECENT_LIMIT) arr.pop();
+                localStorage.setItem(RECENT_KEY, JSON.stringify(arr));
+            }
+
+            // Рандомный якорь по всему городу → потом тугая тройка от него.
+            // Это даёт географическое разнообразие (а не вечно центр).
             function pickRandomTriple() {
-                let pool = [];
-                for (const r of RADII_M) {
-                    pool = findTriples(r);
-                    if (pool.length) break;
+                const unvis = window.STORES.filter(s => s.type && !visited.has(storeId(s)));
+                if (unvis.length < 3) return null;
+
+                // Тасуем якоря (Fisher-Yates)
+                const anchors = [...unvis];
+                for (let i = anchors.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [anchors[i], anchors[j]] = [anchors[j], anchors[i]];
                 }
-                if (!pool.length) return null;
-                // Берём топ-K лучших по плотности (но не меньше 5 чтобы был выбор)
-                const topK = pool.slice(0, Math.max(5, Math.min(20, pool.length)));
-                const lastKey = localStorage.getItem(LAST_QUEST_KEY);
-                let candidates = topK.filter(t => t.key !== lastKey);
-                if (!candidates.length) candidates = topK;
-                const pick = candidates[Math.floor(Math.random() * candidates.length)];
-                localStorage.setItem(LAST_QUEST_KEY, pick.key);
-                return pick;
+
+                const recent = new Set(loadRecent());
+                let fallback = null;
+                for (const A of anchors) {
+                    for (const r of RADII_M) {
+                        const t = bestTripleFor(A, unvis, r);
+                        if (!t) continue;
+                        if (!recent.has(t.key)) {
+                            pushRecent(t.key);
+                            return t;
+                        }
+                        if (!fallback) fallback = t;
+                        break;
+                    }
+                }
+                if (fallback) { pushRecent(fallback.key); return fallback; }
+                return null;
             }
 
             const st = { active: false, targets: [], targetIds: new Set(), markers: [], line: null };
