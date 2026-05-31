@@ -482,23 +482,23 @@
                 const pts = found.triple.map(s => [s.lat, s.lon]);
                 map.fitBounds(L.latLngBounds(pts).pad(0.35));
 
-                // OSRM пешеходный роутинг с фоллбэком на прямую полилинию при оффлайне
+                // Пешеходный роутинг через BRouter (публичный OSRM-демо игнорирует foot-профиль).
+                // Фоллбэк на прямую полилинию при оффлайне.
                 (async () => {
-                    const url = 'https://router.project-osrm.org/route/v1/foot/'
-                        + found.triple.map(s => `${s.lon},${s.lat}`).join(';')
-                        + '?overview=full&geometries=geojson';
+                    const lonlats = found.triple.map(s => `${s.lon},${s.lat}`).join('|');
+                    // hiking-mountain — единственный пешеходный профиль, реально задеплоенный на публичном BRouter
+                    const url = `https://brouter.de/brouter?lonlats=${lonlats}&nogos=&profile=hiking-mountain&alternativeidx=0&format=geojson`;
                     try {
                         const resp = await fetch(url);
-                        if (!resp.ok) throw new Error('OSRM HTTP ' + resp.status);
+                        if (!resp.ok) throw new Error('BRouter HTTP ' + resp.status);
                         const data = await resp.json();
-                        const geom = data.routes && data.routes[0] && data.routes[0].geometry;
-                        if (!geom) throw new Error('OSRM: no geometry');
+                        if (!data || !data.features || !data.features.length) throw new Error('BRouter: empty geometry');
                         if (!st.active) return; // юзер успел свернуть квест пока запрос летел
-                        const shadow = L.geoJSON(geom, { style: { color: '#000', weight: 9, opacity: 0.35, lineCap: 'round', lineJoin: 'round' } });
-                        const main   = L.geoJSON(geom, { style: { color: '#2196f3', weight: 5, opacity: 0.95, lineCap: 'round', lineJoin: 'round' } });
+                        const shadow = L.geoJSON(data, { style: { color: '#000', weight: 9, opacity: 0.35, lineCap: 'round', lineJoin: 'round' } });
+                        const main   = L.geoJSON(data, { style: { color: '#2196f3', weight: 5, opacity: 0.95, lineCap: 'round', lineJoin: 'round' } });
                         st.line = L.layerGroup([shadow, main]).addTo(map);
                     } catch (e) {
-                        console.warn('OSRM unreachable, fallback to straight polyline:', e);
+                        console.warn('BRouter unreachable, fallback to straight polyline:', e);
                         if (!st.active) return;
                         const closed = [...pts, pts[0]];
                         st.line = L.polyline(closed, ROUTE_STYLE).addTo(map);
