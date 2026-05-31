@@ -172,6 +172,25 @@
         .ach-toast-icon { font-size: 32px; line-height: 1; }
         .ach-toast-title { font-size: 11px; font-weight: 800; letter-spacing: 1px; opacity: 0.85; }
         .ach-toast-name { font-size: 16px; font-weight: 800; line-height: 1.2; }
+
+        /* ===== Geolocation ===== */
+        #btn-locate {
+            position: absolute; top: 96px; right: 10px; z-index: 1000;
+            background: rgba(0,0,0,0.75); color: #fff; border: none;
+            width: 36px; height: 36px; border-radius: 6px; cursor: pointer;
+            font-size: 18px; backdrop-filter: blur(4px);
+        }
+        #btn-locate:hover { background: rgba(33,150,243,0.95); }
+        #btn-locate.has-fix { background: #2196f3; }
+
+        .user-dot { background: none !important; border: none !important; }
+        .user-dot-inner {
+            width: 14px; height: 14px;
+            background: #2196f3;
+            border: 3px solid #fff;
+            border-radius: 50%;
+            box-shadow: 0 0 0 2px rgba(33,150,243,0.4), 0 2px 6px rgba(0,0,0,0.55);
+        }
     </style>
 </head>
 <body>
@@ -179,6 +198,7 @@
     <div id="map"></div>
     <div id="stats">— / —</div>
     <button id="btn-reset" type="button" title="Сбросить весь прогресс">🗑</button>
+    <button id="btn-locate" type="button" title="Моё местоположение">📍</button>
     <button id="btn-quest" type="button">🎯 КВЕСТ</button>
     <button id="btn-achievements" type="button" title="Достижения">🏆</button>
 
@@ -285,6 +305,58 @@
         });
 
         updateStats();
+
+        // ===== Live geolocation =====
+        let userPos = null;
+        let userMarker = null;
+        let userAccuracy = null;
+
+        function ensureUserMarker(latlng, accuracy) {
+            if (!userMarker) {
+                userMarker = L.marker(latlng, {
+                    icon: L.divIcon({
+                        className: 'user-dot',
+                        html: '<div class="user-dot-inner"></div>',
+                        iconSize: [20, 20], iconAnchor: [10, 10]
+                    }),
+                    interactive: false, zIndexOffset: 2000
+                }).addTo(map);
+                userAccuracy = L.circle(latlng, {
+                    radius: accuracy || 30,
+                    color: '#2196f3', fillColor: '#2196f3',
+                    fillOpacity: 0.10, weight: 1, opacity: 0.35,
+                    interactive: false
+                }).addTo(map);
+            } else {
+                userMarker.setLatLng(latlng);
+                userAccuracy.setLatLng(latlng);
+                if (accuracy) userAccuracy.setRadius(accuracy);
+            }
+        }
+
+        const locateBtn = document.getElementById('btn-locate');
+        map.on('locationfound', (e) => {
+            userPos = e.latlng;
+            ensureUserMarker(e.latlng, e.accuracy);
+            locateBtn.classList.add('has-fix');
+            document.dispatchEvent(new CustomEvent('user-moved', { detail: { latlng: e.latlng, accuracy: e.accuracy } }));
+        });
+        map.on('locationerror', (e) => {
+            console.warn('Geo error:', e.message);
+            locateBtn.classList.remove('has-fix');
+        });
+        // Запускаем непрерывную слежку
+        map.locate({ watch: true, enableHighAccuracy: true, maximumAge: 5000, timeout: 30000 });
+
+        locateBtn.addEventListener('click', () => {
+            if (userPos) {
+                map.flyTo(userPos, Math.max(map.getZoom(), 16), { duration: 0.7 });
+                document.dispatchEvent(new CustomEvent('user-relocate-request'));
+            } else {
+                map.locate({ setView: true, maxZoom: 16, enableHighAccuracy: true, timeout: 15000 });
+                setTimeout(() => map.locate({ watch: true, enableHighAccuracy: true, maximumAge: 5000, timeout: 30000 }), 500);
+            }
+        });
 
         // ===== Reset progress =====
         (function setupReset() {
@@ -426,7 +498,86 @@
                 return res;
             }
 
-            const st = { active: false, targets: [], targetIds: new Set(), markers: [], line: null };
+            const st = { active: false, targets: [], targetIds: new Set(), markers: [], line: null, routeLatLngs: [], routeGen: 0 };
+
+            // ===== Маршрут от точки start через массив targets =====
+            const REROUTE_MIN_INTERVAL_MS = 20000;
+            const REROUTE_DEVIATION_M = 80;
+            let lastRerouteAt = 0;
+
+            async function drawRoute(start, targets) {
+                if (!targets.length) return;
+                const gen = ++st.routeGen;
+                const coords = [start, ...targets.map(t => L.latLng(t.lat, t.lon))];
+                const lonlats = coords.map(c => `${c.lng},${c.lat}`).join('|');
+                const url = `https://brouter.de/brouter?lonlats=${lonlats}&nogos=&profile=hiking-mountain&alternativeidx=0&format=geojson`;
+                try {
+                    const resp = await fetch(url);
+                    if (!resp.ok) throw new Error('BRouter HTTP ' + resp.status);
+                    const data = await resp.json();
+                    if (!data || !data.features || !data.features.length) throw new Error('BRouter: empty geometry');
+                    if (gen !== st.routeGen || !st.active) return;
+                    if (st.line) map.removeLayer(st.line);
+                    const shadow = L.geoJSON(data, { style: { color: '#000', weight: 9, opacity: 0.35, lineCap: 'round', lineJoin: 'round' } });
+                    const main   = L.geoJSON(data, { style: { color: '#2196f3', weight: 5, opacity: 0.95, lineCap: 'round', lineJoin: 'round' } });
+                    st.line = L.layerGroup([shadow, main]).addTo(map);
+                    const geomCoords = data.features[0].geometry.coordinates;
+                    st.routeLatLngs = geomCoords.map(c => L.latLng(c[1], c[0]));
+                } catch (e) {
+                    console.warn('BRouter unreachable, fallback to straight polyline:', e);
+                    if (gen !== st.routeGen || !st.active) return;
+                    if (st.line) map.removeLayer(st.line);
+                    st.line = L.polyline(coords, { color: '#d32f2f', weight: 4, dashArray: '8 6', opacity: 0.85 }).addTo(map);
+                    st.routeLatLngs = coords;
+                }
+            }
+
+            // Дистанция от точки до полилинии маршрута (в метрах, плоское приближение около точки)
+            function distanceToRoute(p) {
+                if (!st.routeLatLngs || st.routeLatLngs.length < 2) return 0;
+                const R = 6371000, lat0 = p.lat * Math.PI / 180;
+                const toX = lng => (lng * Math.PI / 180) * Math.cos(lat0) * R;
+                const toY = lat => (lat * Math.PI / 180) * R;
+                const px = toX(p.lng), py = toY(p.lat);
+                let min = Infinity;
+                for (let i = 0; i < st.routeLatLngs.length - 1; i++) {
+                    const a = st.routeLatLngs[i], b = st.routeLatLngs[i + 1];
+                    const ax = toX(a.lng), ay = toY(a.lat);
+                    const bx = toX(b.lng), by = toY(b.lat);
+                    const dx = bx - ax, dy = by - ay;
+                    let t;
+                    if (dx === 0 && dy === 0) {
+                        t = 0;
+                    } else {
+                        t = ((px - ax) * dx + (py - ay) * dy) / (dx * dx + dy * dy);
+                        t = Math.max(0, Math.min(1, t));
+                    }
+                    const cx = ax + t * dx, cy = ay + t * dy;
+                    const d = Math.hypot(px - cx, py - cy);
+                    if (d < min) min = d;
+                }
+                return min;
+            }
+
+            function remainingTargets() {
+                return st.targets.filter(s => !visited.has(storeId(s)));
+            }
+
+            function maybeReroute(force) {
+                if (!st.active || !userPos) return;
+                const remaining = remainingTargets();
+                if (!remaining.length) return;
+                const now = Date.now();
+                if (!force) {
+                    if (now - lastRerouteAt < REROUTE_MIN_INTERVAL_MS) return;
+                    if (distanceToRoute(userPos) < REROUTE_DEVIATION_M) return;
+                }
+                lastRerouteAt = now;
+                drawRoute(userPos, remaining);
+            }
+
+            function onUserMoved() { maybeReroute(false); }
+            function onRelocateRequest() { maybeReroute(true); }
 
             function questIcon(store, num) {
                 return L.divIcon({
@@ -464,12 +615,18 @@
 
             function start() {
                 if (st.active) { toast('Квест уже идёт'); return; }
+                if (!userPos) {
+                    toast('Сначала включи геолокацию: жми 📍');
+                    return;
+                }
                 const found = pickRandomTriple();
                 if (!found) { toast('Не нашёл 3 непосещённых точки разных типов поблизости'); return; }
 
                 st.active = true;
                 st.targets = found.triple;
                 st.targetIds = new Set(found.triple.map(s => storeId(s)));
+                st.routeLatLngs = [];
+                lastRerouteAt = 0;
 
                 for (const m of markersById.values()) map.removeLayer(m);
 
@@ -479,44 +636,34 @@
                     return m;
                 });
 
-                const pts = found.triple.map(s => [s.lat, s.lon]);
-                map.fitBounds(L.latLngBounds(pts).pad(0.35));
+                // fitBounds на все точки + позицию юзера, чтобы было видно весь маршрут
+                const allPts = [userPos, ...found.triple.map(s => L.latLng(s.lat, s.lon))];
+                map.fitBounds(L.latLngBounds(allPts).pad(0.35));
 
-                // Пешеходный роутинг через BRouter (публичный OSRM-демо игнорирует foot-профиль).
-                // Фоллбэк на прямую полилинию при оффлайне.
-                (async () => {
-                    const lonlats = found.triple.map(s => `${s.lon},${s.lat}`).join('|');
-                    // hiking-mountain — единственный пешеходный профиль, реально задеплоенный на публичном BRouter
-                    const url = `https://brouter.de/brouter?lonlats=${lonlats}&nogos=&profile=hiking-mountain&alternativeidx=0&format=geojson`;
-                    try {
-                        const resp = await fetch(url);
-                        if (!resp.ok) throw new Error('BRouter HTTP ' + resp.status);
-                        const data = await resp.json();
-                        if (!data || !data.features || !data.features.length) throw new Error('BRouter: empty geometry');
-                        if (!st.active) return; // юзер успел свернуть квест пока запрос летел
-                        const shadow = L.geoJSON(data, { style: { color: '#000', weight: 9, opacity: 0.35, lineCap: 'round', lineJoin: 'round' } });
-                        const main   = L.geoJSON(data, { style: { color: '#2196f3', weight: 5, opacity: 0.95, lineCap: 'round', lineJoin: 'round' } });
-                        st.line = L.layerGroup([shadow, main]).addTo(map);
-                    } catch (e) {
-                        console.warn('BRouter unreachable, fallback to straight polyline:', e);
-                        if (!st.active) return;
-                        const closed = [...pts, pts[0]];
-                        st.line = L.polyline(closed, ROUTE_STYLE).addTo(map);
-                    }
-                })();
+                // Маршрут: от текущей позиции юзера через 3 цели
+                drawRoute(userPos, found.triple);
 
                 showBanner(found.maxDist);
                 document.addEventListener('visited-changed', onVisited);
+                document.addEventListener('user-moved', onUserMoved);
+                document.addEventListener('user-relocate-request', onRelocateRequest);
             }
 
             function onVisited(e) {
                 if (!st.active || !st.targetIds.has(e.detail.id)) return;
-                if (st.targets.every(s => visited.has(storeId(s)))) stop(true);
+                if (st.targets.every(s => visited.has(storeId(s)))) {
+                    stop(true);
+                } else {
+                    // Чекнули одну цель — перерисовать маршрут к оставшимся
+                    maybeReroute(true);
+                }
             }
 
             function stop(success) {
                 if (!st.active) return;
                 document.removeEventListener('visited-changed', onVisited);
+                document.removeEventListener('user-moved', onUserMoved);
+                document.removeEventListener('user-relocate-request', onRelocateRequest);
                 st.markers.forEach(m => map.removeLayer(m));
                 if (st.line) map.removeLayer(st.line);
 
@@ -532,7 +679,8 @@
                 }
 
                 hideBanner();
-                Object.assign(st, { active: false, targets: [], targetIds: new Set(), markers: [], line: null });
+                Object.assign(st, { active: false, targets: [], targetIds: new Set(), markers: [], line: null, routeLatLngs: [] });
+                st.routeGen++;
                 if (success) {
                     document.dispatchEvent(new CustomEvent('quest-completed'));
                     toast('🏆 РЕЙД УСПЕШЕН! Все 3 точки зачищены.');
