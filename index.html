@@ -191,6 +191,27 @@
             border-radius: 50%;
             box-shadow: 0 0 0 2px rgba(33,150,243,0.4), 0 2px 6px rgba(0,0,0,0.55);
         }
+
+        /* ===== Direct route ===== */
+        .popup-content button.route-btn {
+            display: block; width: 100%; padding: 10px; margin-top: 10px;
+            background-color: #00c853; color: #fff !important;
+            text-align: center; border: 2px solid #1b5e20; border-radius: 6px;
+            cursor: pointer; font-weight: 800; font-size: 15px;
+            box-sizing: border-box; letter-spacing: 0.3px;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.6);
+        }
+        .popup-content button.route-btn:hover { background-color: #00a040; }
+
+        #btn-clear-route {
+            position: absolute; top: 140px; right: 10px; z-index: 1000;
+            background: rgba(0,200,83,0.95); color: #fff; border: none;
+            width: 36px; height: 36px; border-radius: 50%; cursor: pointer;
+            font-size: 18px; font-weight: bold;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+            display: none; align-items: center; justify-content: center;
+        }
+        #btn-clear-route:hover { background: #00a040; }
     </style>
 </head>
 <body>
@@ -199,6 +220,7 @@
     <div id="stats">— / —</div>
     <button id="btn-reset" type="button" title="Сбросить весь прогресс">🗑</button>
     <button id="btn-locate" type="button" title="Моё местоположение">📍</button>
+    <button id="btn-clear-route" type="button" title="Убрать маршрут">✕</button>
     <button id="btn-quest" type="button">🎯 КВЕСТ</button>
     <button id="btn-achievements" type="button" title="Достижения">🏆</button>
 
@@ -283,6 +305,7 @@
                     <input type="checkbox" />
                     <span>✅ Я тут был</span>
                 </label>
+                <button class="route-btn" type="button">🚶 Проложить маршрут</button>
                 <a class="maps-btn" target="_blank" rel="noopener">Открыть в Google Maps</a>
             `;
             wrap.querySelector('h3').textContent = store.name;
@@ -298,6 +321,10 @@
                 marker.setIcon(makeIcon(store.type, cb.checked));
                 updateStats();
                 document.dispatchEvent(new CustomEvent('visited-changed', { detail: { id } }));
+            });
+
+            wrap.querySelector('.route-btn').addEventListener('click', () => {
+                window.buildDirectRoute && window.buildDirectRoute(store);
             });
 
             marker.bindPopup(wrap, { maxWidth: 280 });
@@ -357,6 +384,64 @@
                 setTimeout(() => map.locate({ watch: true, enableHighAccuracy: true, maximumAge: 5000, timeout: 30000 }), 500);
             }
         });
+
+        // ===== Direct route к одиночному магазину =====
+        const directRouteLayer = L.layerGroup().addTo(map);
+        let directRouteGen = 0;
+        const clearRouteBtn = document.getElementById('btn-clear-route');
+
+        function showClearRouteBtn() { clearRouteBtn.style.display = 'flex'; }
+        function hideClearRouteBtn() { clearRouteBtn.style.display = 'none'; }
+
+        function clearDirectRoute() {
+            directRouteGen++; // отменяем pending fetch
+            directRouteLayer.clearLayers();
+            hideClearRouteBtn();
+        }
+
+        clearRouteBtn.addEventListener('click', clearDirectRoute);
+
+        window.buildDirectRoute = async function (toStore) {
+            if (!userMarker || !userPos) {
+                alert('Сначала найди себя на карте (нажми 📍)!');
+                return;
+            }
+            const gen = ++directRouteGen;
+            directRouteLayer.clearLayers();
+            const from = userMarker.getLatLng();
+            const lonlats = `${from.lng},${from.lat}|${toStore.lon},${toStore.lat}`;
+            const url = `https://brouter.de/brouter?lonlats=${lonlats}&nogos=&profile=hiking-mountain&alternativeidx=0&format=geojson`;
+
+            let drewSomething = false;
+            try {
+                const resp = await fetch(url);
+                if (!resp.ok) throw new Error('BRouter HTTP ' + resp.status);
+                const data = await resp.json();
+                if (!data || !data.features || !data.features.length) throw new Error('empty geom');
+                if (gen !== directRouteGen) return;
+                const shadow = L.geoJSON(data, { style: { color: '#000', weight: 9, opacity: 0.4, lineCap: 'round', lineJoin: 'round' } });
+                const main   = L.geoJSON(data, { style: { color: '#00c853', weight: 5, opacity: 0.95, lineCap: 'round', lineJoin: 'round' } });
+                directRouteLayer.addLayer(shadow);
+                directRouteLayer.addLayer(main);
+                drewSomething = true;
+            } catch (e) {
+                console.warn('Direct route fallback to straight line:', e);
+                if (gen !== directRouteGen) return;
+                const fallback = L.polyline([from, [toStore.lat, toStore.lon]], {
+                    color: '#00c853', weight: 4, dashArray: '8 6', opacity: 0.9
+                });
+                directRouteLayer.addLayer(fallback);
+                drewSomething = true;
+            }
+
+            if (drewSomething) {
+                showClearRouteBtn();
+                try {
+                    const b = directRouteLayer.getBounds();
+                    if (b && b.isValid()) map.fitBounds(b.pad(0.3));
+                } catch {}
+            }
+        };
 
         // ===== Reset progress =====
         (function setupReset() {
