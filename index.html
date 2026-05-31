@@ -226,32 +226,9 @@
                 return 2 * R * Math.asin(Math.sqrt(a));
             }
 
-            // Для конкретного якоря-А ищем самую плотную тройку с разными типами
-            function bestTripleFor(A, unvis, maxR) {
-                const near = [];
-                for (const s of unvis) {
-                    if (s === A) continue;
-                    const d = haversine(A.lat, A.lon, s.lat, s.lon);
-                    if (d <= maxR) near.push({ s, d });
-                }
-                near.sort((x, y) => x.d - y.d);
-                let best = null, bestScore = Infinity;
-                for (let p = 0; p < near.length; p++) {
-                    const B = near[p];
-                    if (B.s.type === A.type) continue;
-                    for (let q = p + 1; q < near.length; q++) {
-                        const C = near[q];
-                        if (C.s.type === A.type || C.s.type === B.s.type) continue;
-                        const dBC = haversine(B.s.lat, B.s.lon, C.s.lat, C.s.lon);
-                        if (dBC > maxR) continue;
-                        const score = Math.max(B.d, C.d, dBC);
-                        if (score < bestScore) { bestScore = score; best = [A, B.s, C.s]; }
-                    }
-                }
-                if (!best) return null;
-                const ids = best.map(storeId).sort();
-                return { triple: best, maxDist: bestScore, key: ids.join('|') };
-            }
+            // Анти-ТЦ: минимум 400м между любыми двумя; максимум 1500м от якоря
+            const MIN_PAIR_M = 400;
+            const MAX_ANCHOR_M = 1500;
 
             const RECENT_KEY = 'klp_recent_quests_v1';
             const RECENT_LIMIT = 8;
@@ -266,35 +243,77 @@
                 localStorage.setItem(RECENT_KEY, JSON.stringify(arr));
             }
 
-            // Рандомный якорь по всему городу → потом тугая тройка от него.
-            // Это даёт географическое разнообразие (а не вечно центр).
+            function shuffle(arr) {
+                const a = [...arr];
+                for (let i = a.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [a[i], a[j]] = [a[j], a[i]];
+                }
+                return a;
+            }
+
+            function tripleKey(triple) {
+                return triple.map(storeId).sort().join('|');
+            }
+
+            function tripleResult(triple) {
+                const [A, B, C] = triple;
+                const dAB = haversine(A.lat, A.lon, B.lat, B.lon);
+                const dAC = haversine(A.lat, A.lon, C.lat, C.lon);
+                const dBC = haversine(B.lat, B.lon, C.lat, C.lon);
+                return {
+                    triple,
+                    key: tripleKey(triple),
+                    maxDist: Math.max(dAB, dAC, dBC),
+                    minDist: Math.min(dAB, dAC, dBC)
+                };
+            }
+
+            // Уровень поиска: минимум-попарно minPair, макс-от-якоря maxAnchor, требовать ли разные типы
+            function findOnLevel(unvis, minPair, maxAnchor, requireDiffTypes, recent) {
+                const pool = shuffle(unvis);
+                let fallback = null;
+                for (const A of pool) {
+                    for (const B of pool) {
+                        if (B === A) continue;
+                        if (requireDiffTypes && B.type === A.type) continue;
+                        const dAB = haversine(A.lat, A.lon, B.lat, B.lon);
+                        if (dAB < minPair || dAB > maxAnchor) continue;
+                        for (const C of pool) {
+                            if (C === A || C === B) continue;
+                            if (requireDiffTypes && (C.type === A.type || C.type === B.type)) continue;
+                            const dAC = haversine(A.lat, A.lon, C.lat, C.lon);
+                            if (dAC < minPair || dAC > maxAnchor) continue;
+                            const dBC = haversine(B.lat, B.lon, C.lat, C.lon);
+                            if (dBC < minPair) continue;
+                            const res = tripleResult([A, B, C]);
+                            if (!recent.has(res.key)) return res;
+                            if (!fallback) fallback = res;
+                        }
+                    }
+                }
+                return fallback;
+            }
+
             function pickRandomTriple() {
                 const unvis = window.STORES.filter(s => s.type && !visited.has(storeId(s)));
                 if (unvis.length < 3) return null;
-
-                // Тасуем якоря (Fisher-Yates)
-                const anchors = [...unvis];
-                for (let i = anchors.length - 1; i > 0; i--) {
-                    const j = Math.floor(Math.random() * (i + 1));
-                    [anchors[i], anchors[j]] = [anchors[j], anchors[i]];
-                }
-
                 const recent = new Set(loadRecent());
-                let fallback = null;
-                for (const A of anchors) {
-                    for (const r of RADII_M) {
-                        const t = bestTripleFor(A, unvis, r);
-                        if (!t) continue;
-                        if (!recent.has(t.key)) {
-                            pushRecent(t.key);
-                            return t;
-                        }
-                        if (!fallback) fallback = t;
-                        break;
-                    }
-                }
-                if (fallback) { pushRecent(fallback.key); return fallback; }
-                return null;
+
+                // L1 — идеал: разные типы, попарно ≥ 400м, от якоря ≤ 1500м
+                let t = findOnLevel(unvis, MIN_PAIR_M, MAX_ANCHOR_M, true, recent);
+                if (t) { pushRecent(t.key); t.level = 1; return t; }
+
+                // L2 — игнорим минимум 400м, типы и 1500м держим
+                t = findOnLevel(unvis, 0, MAX_ANCHOR_M, true, recent);
+                if (t) { pushRecent(t.key); t.level = 2; return t; }
+
+                // L3 — три любые непосещённые
+                const shuffled = shuffle(unvis);
+                const res = tripleResult(shuffled.slice(0, 3));
+                pushRecent(res.key);
+                res.level = 3;
+                return res;
             }
 
             const st = { active: false, targets: [], targetIds: new Set(), markers: [], line: null };
