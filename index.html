@@ -125,6 +125,53 @@
         .modal-btn-yes:hover { background: #b71c1c; }
         .modal-btn-no { background: #444; color: #fff; }
         .modal-btn-no:hover { background: #555; }
+
+        /* ===== Achievements ===== */
+        #btn-achievements {
+            position: absolute; bottom: 20px; right: 16px; z-index: 1000;
+            background: linear-gradient(135deg, #ef5350, #b71c1c);
+            color: #fff; border: 2px solid rgba(255,255,255,0.2);
+            width: 56px; height: 56px; border-radius: 50%; cursor: pointer;
+            font-size: 26px; box-shadow: 0 6px 16px rgba(0,0,0,0.55);
+            display: flex; align-items: center; justify-content: center;
+        }
+        #btn-achievements:hover { transform: scale(1.05); }
+
+        .ach-modal { max-width: 400px; text-align: left; }
+        .ach-modal h3 { text-align: center; }
+        .ach-summary { text-align: center; font-size: 13px; opacity: 0.85; margin: -4px 0 14px 0; }
+        .ach-list { display: flex; flex-direction: column; gap: 8px; max-height: 60vh; overflow-y: auto; padding-right: 4px; }
+        .ach-item {
+            display: flex; align-items: center; gap: 12px;
+            padding: 10px 12px; border-radius: 8px;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        .ach-item.unlocked {
+            background: linear-gradient(135deg, rgba(211,47,47,0.28), rgba(211,47,47,0.06));
+            border-color: rgba(211,47,47,0.7);
+        }
+        .ach-item.locked { background: rgba(255,255,255,0.04); opacity: 0.5; filter: grayscale(0.6); }
+        .ach-item-icon { font-size: 28px; width: 36px; text-align: center; flex-shrink: 0; }
+        .ach-item-body { flex: 1; min-width: 0; }
+        .ach-item-name { font-weight: 800; font-size: 14px; margin-bottom: 2px; }
+        .ach-item-desc { font-size: 12px; opacity: 0.8; }
+
+        .ach-toast {
+            position: fixed; left: 50%; top: 30px;
+            transform: translateX(-50%) translateY(-30px);
+            background: linear-gradient(135deg, #b71c1c, #d32f2f);
+            color: #fff; padding: 14px 22px; border-radius: 12px;
+            display: flex; align-items: center; gap: 14px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.6);
+            border: 2px solid rgba(255,255,255,0.3);
+            z-index: 2500; opacity: 0;
+            transition: opacity .35s, transform .35s; pointer-events: none;
+            max-width: 92vw;
+        }
+        .ach-toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+        .ach-toast-icon { font-size: 32px; line-height: 1; }
+        .ach-toast-title { font-size: 11px; font-weight: 800; letter-spacing: 1px; opacity: 0.85; }
+        .ach-toast-name { font-size: 16px; font-weight: 800; line-height: 1.2; }
     </style>
 </head>
 <body>
@@ -133,6 +180,7 @@
     <div id="stats">— / —</div>
     <button id="btn-reset" type="button" title="Сбросить весь прогресс">🗑</button>
     <button id="btn-quest" type="button">🎯 КВЕСТ</button>
+    <button id="btn-achievements" type="button" title="Достижения">🏆</button>
 
     <script src="./vendor/leaflet.js"></script>
     <script src="./data.js"></script>
@@ -463,7 +511,10 @@
 
                 hideBanner();
                 Object.assign(st, { active: false, targets: [], targetIds: new Set(), markers: [], line: null });
-                if (success) toast('🏆 РЕЙД УСПЕШЕН! Все 3 точки зачищены.');
+                if (success) {
+                    document.dispatchEvent(new CustomEvent('quest-completed'));
+                    toast('🏆 РЕЙД УСПЕШЕН! Все 3 точки зачищены.');
+                }
             }
 
             function showBanner(maxDist) {
@@ -489,6 +540,132 @@
             }
 
             document.getElementById('btn-quest').addEventListener('click', start);
+        })();
+
+        // ===== Achievements =====
+        (function setupAchievements() {
+            const KEY = 'klp_achievements_v1';
+            const ACHIEVEMENTS = [
+                { id: 'rookie',        name: 'Салага с Южного',     desc: 'Посети 10 любых точек', icon: '🥉', check: s => s.totalVisited >= 10 },
+                { id: 'district_boss', name: 'Смотрящий за районом', desc: 'Посети 50 точек',       icon: '🥈', check: s => s.totalVisited >= 50 },
+                { id: 'monolith',      name: 'Абсолютный Монолит',   desc: 'Собери все точки',      icon: '🥇', check: s => s.totalVisited >= s.total },
+                { id: 'degustator',    name: 'Дегустатор шмурдяка',  desc: '3 алкомаркета',         icon: '🍾', check: s => s.byType.alcohol >= 3 },
+                { id: 'gas_baron',     name: 'Бензиновый магнат',    desc: '5 заправок',            icon: '⛽', check: s => s.byType.fuel >= 5 },
+                { id: 'kulibin',       name: 'Кулибин',              desc: '3 точки хозтоваров',    icon: '🛠️', check: s => s.byType.doityourself >= 3 },
+                { id: 'first_blood',   name: 'Первая кровь',         desc: 'Заверши 1 квест',       icon: '🩸', check: s => s.quests >= 1 },
+                { id: 'mad_max',       name: 'Безумный Макс',        desc: 'Заверши 5 квестов',     icon: '🔥', check: s => s.quests >= 5 },
+            ];
+
+            function load() {
+                try {
+                    const raw = JSON.parse(localStorage.getItem(KEY) || '{}');
+                    return { unlocked: new Set(raw.unlocked || []), quests: raw.quests || 0 };
+                } catch { return { unlocked: new Set(), quests: 0 }; }
+            }
+            function save(state) {
+                localStorage.setItem(KEY, JSON.stringify({ unlocked: [...state.unlocked], quests: state.quests }));
+            }
+            const state = load();
+
+            function computeStats() {
+                const byType = { alcohol: 0, fuel: 0, doityourself: 0, supermarket: 0, convenience: 0 };
+                let totalVisited = 0;
+                for (const s of window.STORES) {
+                    if (visited.has(storeId(s))) {
+                        totalVisited++;
+                        if (byType[s.type] !== undefined) byType[s.type]++;
+                    }
+                }
+                return { totalVisited, byType, quests: state.quests, total: window.STORES.length };
+            }
+
+            // Очередь тостов — не наезжают друг на друга
+            const queue = [];
+            let showing = false;
+            function drain() {
+                if (showing || !queue.length) return;
+                showing = true;
+                const a = queue.shift();
+                const t = document.createElement('div');
+                t.className = 'ach-toast';
+                t.innerHTML = `
+                    <div class="ach-toast-icon">${a.icon}</div>
+                    <div>
+                        <div class="ach-toast-title">🏆 ДОСТИЖЕНИЕ</div>
+                        <div class="ach-toast-name"></div>
+                    </div>`;
+                t.querySelector('.ach-toast-name').textContent = a.name;
+                document.body.appendChild(t);
+                requestAnimationFrame(() => t.classList.add('show'));
+                setTimeout(() => {
+                    t.classList.remove('show');
+                    setTimeout(() => { t.remove(); showing = false; drain(); }, 400);
+                }, 3000);
+            }
+            function notify(a) { queue.push(a); drain(); }
+
+            function check() {
+                const stats = computeStats();
+                const newly = [];
+                for (const a of ACHIEVEMENTS) {
+                    if (!state.unlocked.has(a.id) && a.check(stats)) {
+                        state.unlocked.add(a.id);
+                        newly.push(a);
+                    }
+                }
+                if (newly.length) {
+                    save(state);
+                    newly.forEach(notify);
+                }
+            }
+
+            function showModal() {
+                const back = document.createElement('div');
+                back.className = 'modal-backdrop';
+                const items = ACHIEVEMENTS.map(a => {
+                    const u = state.unlocked.has(a.id);
+                    const icon = u ? a.icon : '🔒';
+                    const cls = u ? 'unlocked' : 'locked';
+                    return `
+                        <div class="ach-item ${cls}">
+                            <div class="ach-item-icon">${icon}</div>
+                            <div class="ach-item-body">
+                                <div class="ach-item-name"></div>
+                                <div class="ach-item-desc"></div>
+                            </div>
+                        </div>`;
+                }).join('');
+                back.innerHTML = `
+                    <div class="modal ach-modal">
+                        <h3>🏆 Достижения</h3>
+                        <div class="ach-summary">${state.unlocked.size} / ${ACHIEVEMENTS.length} • завершено квестов: ${state.quests}</div>
+                        <div class="ach-list">${items}</div>
+                        <div class="modal-actions" style="margin-top:14px">
+                            <button class="modal-btn modal-btn-no" id="ach-close">Закрыть</button>
+                        </div>
+                    </div>`;
+                // Заполняем name/desc через textContent чтобы не схватить XSS если когда-нибудь будут юзер-стринги
+                const rows = back.querySelectorAll('.ach-item');
+                rows.forEach((row, i) => {
+                    row.querySelector('.ach-item-name').textContent = ACHIEVEMENTS[i].name;
+                    row.querySelector('.ach-item-desc').textContent = ACHIEVEMENTS[i].desc;
+                });
+                document.body.appendChild(back);
+                const close = () => back.remove();
+                back.addEventListener('click', (e) => { if (e.target === back) close(); });
+                document.getElementById('ach-close').addEventListener('click', close);
+            }
+
+            document.getElementById('btn-achievements').addEventListener('click', showModal);
+            document.addEventListener('visited-changed', check);
+            document.addEventListener('quest-completed', () => {
+                state.quests++;
+                save(state);
+                check();
+            });
+
+            // Стартовая проверка (на случай если данные есть, а ачивки ещё не открыты)
+            check();
         })();
     </script>
 </body>
