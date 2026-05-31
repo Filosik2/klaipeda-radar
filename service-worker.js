@@ -1,4 +1,4 @@
-const CACHE_NAME = 'klp-radar-v7';
+const CACHE_NAME = 'klp-radar-v8';
 const TILE_CACHE = 'klp-radar-tiles-v1';
 
 const APP_SHELL = [
